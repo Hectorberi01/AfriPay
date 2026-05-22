@@ -1,15 +1,20 @@
 ---
 # ── Rôle docker — Installation de Docker CE + Docker Compose V2 ─
 
-- name: Supprimer les anciennes versions de Docker
+- name: Vérifier si Docker CE est déjà installé
+  ansible.builtin.command: docker --version
+  register: docker_already_installed
+  changed_when: false
+  failed_when: false
+
+- name: Supprimer les anciennes versions de Docker (seulement si Docker CE absent)
   ansible.builtin.apt:
     name:
       - docker
       - docker-engine
       - docker.io
-      - containerd
-      - runc
     state: absent
+  when: docker_already_installed.rc != 0
 
 - name: Nettoyer les entrées Docker conflictuelles
   ansible.builtin.file:
