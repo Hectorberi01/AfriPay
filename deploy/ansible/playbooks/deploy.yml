@@ -11,9 +11,6 @@
   become: true
   serial: 1        # rolling update serveur par serveur
 
-  vars_files:
-    - "{{ inventory_dir }}/group_vars/vault.yml"
-
   vars:
     deploy_timestamp: "{{ ansible_date_time.iso8601 }}"
 

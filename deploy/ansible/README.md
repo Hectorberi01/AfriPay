@@ -19,7 +19,7 @@ ansible/
 │   │   ├── hosts.yml                  # Serveurs de production
 │   │   └── group_vars/
 │   │       ├── all.yml                # Variables globales
-│   │       └── vault.yml              # 🔐 Secrets (chiffrer avec Vault)
+│   │       └── vault.yml              # Secrets (chiffrer avec Vault)
 │   └── staging/
 │       └── hosts.yml
 ├── playbooks/
@@ -149,12 +149,33 @@ ansible api -m uri -a "url=https://api.afripay.io/health"
 
 ## Variables d'environnement CI/CD
 
-Ajouter dans les secrets GitHub Actions :
+### Secrets communs (Settings → Secrets → Actions)
 
 | Secret | Description |
 |---|---|
-| `PROD_HOST` | IP ou hostname du serveur |
-| `PROD_USER` | Utilisateur SSH (`afripay`) |
-| `PROD_SSH_KEY` | Clé privée SSH |
-| `ANSIBLE_VAULT_PASS` | Mot de passe Ansible Vault |
-| `IMAGE_TAG` | Tag Docker à déployer |
+| `ANSIBLE_VAULT_PASS` | Mot de passe Ansible Vault (commun aux deux envs) |
+
+### Secrets environnement `staging` (Settings → Environments → staging)
+
+| Secret | Description |
+|---|---|
+| `STAGING_HOST` | IP ou hostname du serveur staging |
+| `STAGING_SSH_KEY` | Clé privée SSH (`~/.ssh/afripay_staging`) |
+
+### Secrets environnement `production` (Settings → Environments → production)
+
+| Secret | Description |
+|---|---|
+| `PROD_HOST` | IP ou hostname du serveur de production |
+| `PROD_SSH_KEY` | Clé privée SSH (`~/.ssh/afripay_prod`) |
+
+### Configurer les vault.yml
+
+```bash
+# Staging : renseigner les secrets puis chiffrer
+nano inventory/staging/group_vars/vault.yml
+ansible-vault encrypt inventory/staging/group_vars/vault.yml
+
+# Production : même procédure
+ansible-vault encrypt inventory/production/group_vars/vault.yml
+```

@@ -1,0 +1,99 @@
+name: Deploy — Staging
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Tag Docker à déployer (ex: sha-abc1234)"
+        required: false
+        default: "develop"
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: true
+
+jobs:
+  build-and-push:
+    name: Build & Push image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      image_tag: ${{ steps.meta.outputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/afripay-api
+          tags: |
+            type=raw,value=develop
+            type=sha,prefix=sha-,format=short
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    environment: staging
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Ansible
+        run: |
+          pip install ansible
+          ansible-galaxy collection install community.docker community.general ansible.posix
+
+      - name: Configure SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/afripay_staging
+          chmod 600 ~/.ssh/afripay_staging
+
+      - name: Configure Ansible Vault password
+        run: |
+          echo "${{ secrets.ANSIBLE_VAULT_PASS }}" > ~/.ansible/vault_pass
+          chmod 600 ~/.ansible/vault_pass
+
+      - name: Deploy to staging
+        working-directory: deploy/ansible
+        env:
+          STAGING_HOST: ${{ secrets.STAGING_HOST }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          IMAGE_TAG: ${{ inputs.image_tag || needs.build-and-push.outputs.image_tag }}
+        run: |
+          ansible-playbook playbooks/deploy.yml \
+            -i inventory/staging \
+            -e "image_tag=${IMAGE_TAG}"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Déploiement staging échoué pour le tag ${IMAGE_TAG}"

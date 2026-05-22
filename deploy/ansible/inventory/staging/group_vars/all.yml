@@ -1,0 +1,60 @@
+---
+#  Variables globales — Staging AfriPay
+#  Les valeurs sensibles sont dans vault.yml (chiffrer avec Ansible Vault)
+
+# Application
+app_name: afripay
+app_dir:  /opt/afripay
+app_user: afripay
+app_group: afripay
+app_port: 8080
+
+# Images Docker
+ghcr_registry: ghcr.io
+ghcr_repo: "{{ lookup('env', 'GITHUB_REPOSITORY') | default('Hectorberi01/AfriPay') }}"
+image_api: "{{ ghcr_registry }}/{{ ghcr_repo }}/afripay-api"
+image_tag: "{{ lookup('env', 'IMAGE_TAG') | default('develop') }}"
+
+# SSH (clé dédiée staging)
+ansible_ssh_private_key_file: ~/.ssh/afripay_staging
+
+# Domaines staging
+domain_api:     staging-api.afripay.io
+domain_metrics: staging-metrics.afripay.io
+
+# Ports internes (identiques à prod)
+port_api:           8080
+port_postgres_live: 5433
+port_postgres_sand: 5434
+port_redis:         6379
+port_prometheus:    9090
+port_grafana:       3001
+port_alertmanager:  9093
+
+# PostgreSQL
+postgres_version: "16"
+postgres_live_db: afripay_staging_live
+postgres_sand_db: afripay_staging_sandbox
+postgres_user:    afripay
+
+# Redis
+redis_version:    "7"
+redis_maxmemory:  128mb
+
+# SSL / Certbot
+certbot_email: devops@afripay.io
+certbot_domains:
+  - "{{ domain_api }}"
+  - "{{ domain_metrics }}"
+
+# Monitoring
+prometheus_retention: 7d
+grafana_root_url: "https://{{ domain_metrics }}"
+
+# Système
+timezone: Africa/Abidjan
+swap_size_mb: 1024
+ufw_allowed_ports:
+  - 22
+  - 80
+  - 443
