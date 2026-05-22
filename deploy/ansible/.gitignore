@@ -1,7 +1,5 @@
-# Secrets chiffrés non versionnés tant que non chiffrés par Vault
+# Les vault.yml chiffrés sont versionnés (AES256 — sûr à commiter)
 *.retry
-inventory/*/group_vars/vault.yml
-!inventory/*/group_vars/vault.yml.example
 
 # Clés SSH
 *.pem
