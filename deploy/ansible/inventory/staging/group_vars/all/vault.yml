@@ -1,0 +1,27 @@
+#  SECRETS STAGING — Chiffrer ce fichier avec :
+#  ansible-vault encrypt inventory/staging/group_vars/vault.yml
+#
+#  Pour éditer : ansible-vault edit inventory/staging/group_vars/vault.yml
+
+vault_postgres_password:     "Hba@Str0ng#2026"
+vault_redis_password:        "CHANGE_ME_staging_password"
+vault_jwt_secret:            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkZXYtc2VjcmV0LWtleS1taW5pbXVtLTMyLWNoYXJhY3RlcnMhISIsIm5hbWUiOiJBZnJpUGF5IiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.2nU-bxBfPWQxfvmTtfLfKGBhr4J8NY9Xq47gWQFkNIA"
+
+vault_sendgrid_api_key:      "SG.CHANGE_ME"
+
+vault_mtn_live_subscription_key:    "CHANGE_ME"
+vault_mtn_sandbox_subscription_key: "92e8b9d57b5b476e96365f822af9a0b4"
+
+vault_paypal_live_client_id:    "CHANGE_ME"
+vault_paypal_live_secret:       "CHANGE_ME"
+vault_paypal_sandbox_client_id: "AYFWm7mQUY1hiYtLIe65-umBqvI6HB7sLVXlNBVFdISl7NkTpM74BMmAgxXsYNdbzDXovjoPU-egd5B4"
+vault_paypal_sandbox_secret:    "ELYWNl1_ww1gzwZcX7cVqSXatil4tqsecYwB6B74N-zAz_hgpPgI9sO9KDLmQqedLv2fyMRoDGibjtPj"
+
+vault_stripe_live_secret_key: "sk_live_CHANGE_ME"
+vault_stripe_test_secret_key: "sk_test_CHANGE_ME"
+
+vault_grafana_admin_password: "CHANGE_ME_staging_password"
+vault_slack_webhook_url:      "https://hooks.slack.com/CHANGE_ME"
+
+vault_ghcr_token: "ghp_CHANGE_ME"
+vault_ghcr_user:  "Hectorberi01"

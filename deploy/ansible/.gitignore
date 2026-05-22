@@ -1,4 +1,6 @@
-# Les vault.yml chiffrés sont versionnés (AES256 — sûr à commiter)
+# Le vault staging chiffré est versionné (AES256 — sûr à commiter)
+# Le vault production reste hors dépôt (chiffrer avant de commiter)
+inventory/production/group_vars/all/vault.yml
 *.retry
 
 # Clés SSH
