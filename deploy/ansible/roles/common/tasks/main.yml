@@ -1,0 +1,170 @@
+---
+# ── Rôle common — Durcissement de base du serveur ──────────────
+
+- name: Configurer le fuseau horaire
+  community.general.timezone:
+    name: "{{ timezone }}"
+
+- name: Installer les paquets système essentiels
+  ansible.builtin.apt:
+    name:
+      - curl
+      - wget
+      - git
+      - unzip
+      - htop
+      - vim
+      - jq
+      - ca-certificates
+      - gnupg
+      - lsb-release
+      - python3-pip
+      - python3-docker
+      - fail2ban
+      - ufw
+      - unattended-upgrades
+      - logrotate
+    state: present
+    update_cache: true
+
+# ── Utilisateur applicatif ─────────────────────────────────────
+- name: Créer le groupe applicatif
+  ansible.builtin.group:
+    name: "{{ app_group }}"
+    state: present
+
+- name: Créer l'utilisateur applicatif
+  ansible.builtin.user:
+    name: "{{ app_user }}"
+    group: "{{ app_group }}"
+    groups: docker
+    shell: /bin/bash
+    home: "/home/{{ app_user }}"
+    create_home: true
+    system: false
+
+- name: Créer le répertoire de l'application
+  ansible.builtin.file:
+    path: "{{ app_dir }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: "0750"
+
+- name: Créer les sous-répertoires
+  ansible.builtin.file:
+    path: "{{ app_dir }}/{{ item }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: "0750"
+  loop:
+    - logs
+    - backups
+    - data/postgres-live
+    - data/postgres-sand
+    - data/redis
+
+# ── Swap ───────────────────────────────────────────────────────
+- name: Vérifier si le swap existe
+  ansible.builtin.stat:
+    path: /swapfile
+  register: swapfile_stat
+
+- name: Créer le fichier swap
+  ansible.builtin.command: >
+    fallocate -l {{ swap_size_mb }}M /swapfile
+  when: not swapfile_stat.stat.exists
+  changed_when: true
+
+- name: Configurer les permissions swap
+  ansible.builtin.file:
+    path: /swapfile
+    mode: "0600"
+  when: not swapfile_stat.stat.exists
+
+- name: Formater le swap
+  ansible.builtin.command: mkswap /swapfile
+  when: not swapfile_stat.stat.exists
+  changed_when: true
+
+- name: Activer le swap
+  ansible.builtin.command: swapon /swapfile
+  when: not swapfile_stat.stat.exists
+  changed_when: true
+
+- name: Persister le swap dans fstab
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    line: "/swapfile none swap sw 0 0"
+    state: present
+
+# ── Pare-feu UFW ───────────────────────────────────────────────
+- name: Réinitialiser UFW
+  community.general.ufw:
+    state: reset
+
+- name: Politique par défaut — refuser entrant
+  community.general.ufw:
+    default: deny
+    direction: incoming
+
+- name: Politique par défaut — autoriser sortant
+  community.general.ufw:
+    default: allow
+    direction: outgoing
+
+- name: Ouvrir les ports autorisés
+  community.general.ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop: "{{ ufw_allowed_ports }}"
+
+- name: Activer UFW
+  community.general.ufw:
+    state: enabled
+
+# ── Fail2ban ───────────────────────────────────────────────────
+- name: Configurer fail2ban pour SSH
+  ansible.builtin.copy:
+    dest: /etc/fail2ban/jail.local
+    content: |
+      [DEFAULT]
+      bantime  = 3600
+      findtime = 600
+      maxretry = 5
+      ignoreip = 127.0.0.1/8
+
+      [sshd]
+      enabled  = true
+      port     = 22
+      maxretry = 3
+    mode: "0644"
+  notify: Redémarrer fail2ban
+
+# ── Mises à jour automatiques ──────────────────────────────────
+- name: Configurer unattended-upgrades
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/50unattended-upgrades
+    content: |
+      Unattended-Upgrade::Allowed-Origins {
+          "${distro_id}:${distro_codename}-security";
+      };
+      Unattended-Upgrade::AutoFixInterruptedDpkg "true";
+      Unattended-Upgrade::MinimalSteps "true";
+      Unattended-Upgrade::Remove-Unused-Dependencies "true";
+      Unattended-Upgrade::Automatic-Reboot "false";
+    mode: "0644"
+
+# ── Paramètres noyau ───────────────────────────────────────────
+- name: Optimiser les paramètres sysctl
+  ansible.posix.sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: true
+  loop:
+    - { key: "net.core.somaxconn",      value: "1024" }
+    - { key: "vm.overcommit_memory",    value: "1" }
+    - { key: "net.ipv4.tcp_syncookies", value: "1" }

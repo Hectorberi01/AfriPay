@@ -1,0 +1,63 @@
+---
+#  provision.yml — Provisionning initial du serveur de production
+#
+#  Usage :
+#    ansible-playbook playbooks/provision.yml
+#    ansible-playbook playbooks/provision.yml --tags docker
+#    ansible-playbook playbooks/provision.yml --tags nginx,certbot
+
+- name: Provisionner le serveur AfriPay
+  hosts: api
+  become: true
+
+  vars_files:
+    - "{{ inventory_dir }}/group_vars/vault.yml"
+
+  pre_tasks:
+    - name: Mettre à jour le cache APT
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+      tags: always
+
+    - name: Afficher les informations du serveur
+      ansible.builtin.debug:
+        msg: "Provisionnement de {{ inventory_hostname }} ({{ ansible_host }}) — OS : {{ ansible_distribution }} {{ ansible_distribution_version }}"
+      tags: always
+
+  roles:
+    - role: common
+      tags: [common, base]
+
+    - role: docker
+      tags: [docker]
+
+    - role: nginx
+      tags: [nginx]
+
+    - role: certbot
+      tags: [certbot, ssl]
+
+    - role: afripay
+      tags: [afripay, app]
+
+    - role: monitoring
+      tags: [monitoring, observability]
+
+  post_tasks:
+    - name: Vérification santé finale
+      ansible.builtin.uri:
+        url: "https://{{ domain_api }}/health"
+        method: GET
+        status_code: 200
+        timeout: 30
+      register: health_check
+      retries: 5
+      delay: 10
+      until: health_check.status == 200
+      tags: always
+
+    - name: Provisionning terminé
+      ansible.builtin.debug:
+        msg: "Serveur {{ inventory_hostname }} provisionné avec succès."
+      tags: always

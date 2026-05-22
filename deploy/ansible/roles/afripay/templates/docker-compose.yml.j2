@@ -1,0 +1,172 @@
+# ════════════════════════════════════════════════════════════════
+#  docker-compose.yml — AfriPay Production Stack
+#  Généré par Ansible le {{ ansible_date_time.iso8601 }}
+# ════════════════════════════════════════════════════════════════
+
+services:
+
+  # API AfriPay 
+  afripay-api:
+    image: "{{ image_api }}:{{ image_tag }}"
+    container_name: afripay-api
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ app_port }}:{{ app_port }}"
+    environment:
+      ASPNETCORE_ENVIRONMENT:    Production
+      ASPNETCORE_URLS:           http://+:{{ app_port }}
+
+      ConnectionStrings__AfriPayLive: >-
+        Host=postgres-live;Port=5432;
+        Database={{ postgres_live_db }};
+        Username={{ postgres_user }};
+        Password=${POSTGRES_PASSWORD};
+        CommandTimeout=30;
+        Pooling=true;MaxPoolSize=50
+      ConnectionStrings__AfriPaySandbox: >-
+        Host=postgres-sand;Port=5432;
+        Database={{ postgres_sand_db }};
+        Username={{ postgres_user }};
+        Password=${POSTGRES_PASSWORD};
+        CommandTimeout=30
+      ConnectionStrings__Redis: >-
+        redis:6379,password=${REDIS_PASSWORD},abortConnect=false
+
+      Jwt__Secret:           ${JWT_SECRET}
+      Jwt__Issuer:           AfriPay
+      Jwt__Audience:         AfriPay
+      Jwt__ExpiresInMinutes: "15"
+
+      SendGrid__ApiKey:    ${SENDGRID_API_KEY}
+      SendGrid__FromEmail: noreply@afripay.io
+      SendGrid__FromName:  AfriPay
+
+      Providers__MtnMomo__LiveBaseUrl:            https://proxy.momoapi.mtn.com
+      Providers__MtnMomo__SandboxBaseUrl:         https://sandbox.momodeveloper.mtn.com
+      Providers__MtnMomo__LiveSubscriptionKey:    ${MTN_LIVE_SUBSCRIPTION_KEY}
+      Providers__MtnMomo__SandboxSubscriptionKey: ${MTN_SANDBOX_SUBSCRIPTION_KEY}
+
+      Providers__PayPal__LiveBaseUrl:     https://api-m.paypal.com/
+      Providers__PayPal__SandboxBaseUrl:  https://api-m.sandbox.paypal.com/
+      Providers__PayPal__LiveClientId:    ${PAYPAL_LIVE_CLIENT_ID}
+      Providers__PayPal__LiveSecret:      ${PAYPAL_LIVE_SECRET}
+      Providers__PayPal__SandboxClientId: ${PAYPAL_SANDBOX_CLIENT_ID}
+      Providers__PayPal__SandboxSecret:   ${PAYPAL_SANDBOX_SECRET}
+
+      Providers__Stripe__LiveSecretKey:    ${STRIPE_LIVE_SECRET_KEY}
+      Providers__Stripe__SandboxSecretKey: ${STRIPE_TEST_SECRET_KEY}
+
+      Serilog__MinimumLevel__Default:                            Warning
+      Serilog__MinimumLevel__Override__AfriPay:                 Information
+      Serilog__MinimumLevel__Override__Microsoft:               Warning
+      Serilog__MinimumLevel__Override__Microsoft.EntityFramework: Warning
+
+    depends_on:
+      postgres-live:
+        condition: service_healthy
+      postgres-sand:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - afripay-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:{{ app_port }}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # ── PostgreSQL Live ──────────────────────────────────────────
+  postgres-live:
+    image: postgres:{{ postgres_version }}-alpine
+    container_name: afripay-postgres-live
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       {{ postgres_live_db }}
+      POSTGRES_USER:     {{ postgres_user }}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA:            /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_live_data:/var/lib/postgresql/data
+    networks:
+      - afripay-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U {{ postgres_user }} -d {{ postgres_live_db }}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+  # ── PostgreSQL Sandbox ───────────────────────────────────────
+  postgres-sand:
+    image: postgres:{{ postgres_version }}-alpine
+    container_name: afripay-postgres-sandbox
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       {{ postgres_sand_db }}
+      POSTGRES_USER:     {{ postgres_user }}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA:            /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_sand_data:/var/lib/postgresql/data
+    networks:
+      - afripay-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U {{ postgres_user }} -d {{ postgres_sand_db }}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ── Redis ────────────────────────────────────────────────────
+  redis:
+    image: redis:{{ redis_version }}-alpine
+    container_name: afripay-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD}
+      --maxmemory {{ redis_maxmemory }}
+      --maxmemory-policy allkeys-lru
+      --save 60 1000
+      --loglevel warning
+    volumes:
+      - redis_data:/data
+    networks:
+      - afripay-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres_live_data:
+    driver: local
+  postgres_sand_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  afripay-net:
+    driver: bridge

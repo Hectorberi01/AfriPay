@@ -1,0 +1,109 @@
+# AfriPay API — Nginx Reverse Proxy
+# Généré par Ansible — ne pas modifier manuellement
+
+# Limitation de débit globale
+limit_req_zone $binary_remote_addr zone=api_limit:10m rate=100r/s;
+
+upstream afripay_api {
+    server 127.0.0.1:{{ app_port }};
+    keepalive 32;
+}
+
+# Redirection HTTP → HTTPS
+server {
+    listen 80;
+    listen [::]:80;
+    server_name {{ domain_api }};
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+#HTTPS
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name {{ domain_api }};
+
+    # TLS
+    ssl_certificate     /etc/letsencrypt/live/{{ domain_api }}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/{{ domain_api }}/privkey.pem;
+    ssl_session_cache   shared:SSL:10m;
+    ssl_session_timeout 1d;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+    ssl_stapling        on;
+    ssl_stapling_verify on;
+
+    # Headers de sécurité
+    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
+    add_header X-Content-Type-Options    "nosniff"                                        always;
+    add_header X-Frame-Options           "DENY"                                           always;
+    add_header X-XSS-Protection          "1; mode=block"                                  always;
+    add_header Referrer-Policy           "strict-origin-when-cross-origin"                always;
+    add_header Permissions-Policy        "geolocation=(), microphone=(), camera=()"       always;
+
+    # Proxy vers l'API
+    location / {
+        limit_req zone=api_limit burst=200 nodelay;
+
+        proxy_pass         http://afripay_api;
+        proxy_http_version 1.1;
+        proxy_set_header   Connection        "";
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+
+        proxy_connect_timeout  10s;
+        proxy_send_timeout     60s;
+        proxy_read_timeout     60s;
+        proxy_buffering        on;
+        proxy_buffer_size      8k;
+        proxy_buffers          8 8k;
+
+        # CORS (adapter selon les origines autorisées)
+        add_header Access-Control-Allow-Origin  "https://app.afripay.io" always;
+        add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS" always;
+        add_header Access-Control-Allow-Headers "Authorization, X-API-Key, Content-Type, Idempotency-Key" always;
+
+        if ($request_method = 'OPTIONS') {
+            return 204;
+        }
+    }
+
+    # Health check — pas de rate limit
+    location = /health {
+        proxy_pass http://afripay_api/health;
+        access_log off;
+    }
+
+    # Documentation Scalar — pas de rate limit
+    location /docs {
+        proxy_pass http://afripay_api/docs;
+    }
+
+    # Webhooks providers — pas de rate limit
+    location /webhooks/providers/ {
+        limit_req zone=api_limit burst=500 nodelay;
+        proxy_pass http://afripay_api;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Masquer les tokens d'erreur Nginx
+    server_tokens off;
+
+    # Logs 
+    access_log /var/log/nginx/afripay-api-access.log combined;
+    error_log  /var/log/nginx/afripay-api-error.log warn;
+}

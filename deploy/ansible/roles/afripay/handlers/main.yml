@@ -1,0 +1,7 @@
+---
+- name: Redémarrer AfriPay
+  community.docker.docker_compose_v2:
+    project_src: "{{ app_dir }}"
+    services: [afripay-api]
+    recreate: always
+    pull: never

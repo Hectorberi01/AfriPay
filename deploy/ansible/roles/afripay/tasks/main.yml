@@ -1,0 +1,92 @@
+---
+# ── Rôle afripay — Déploiement de la stack applicative ─────────
+
+- name: Créer la structure de répertoires
+  ansible.builtin.file:
+    path: "{{ app_dir }}/{{ item }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: "0750"
+  loop:
+    - ""
+    - logs
+    - backups
+
+- name: Déployer le fichier .env (secrets chiffrés via Vault)
+  ansible.builtin.template:
+    src: .env.j2
+    dest: "{{ app_dir }}/.env"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: "0600"
+  no_log: true
+  notify: Redémarrer AfriPay
+
+- name: Déployer docker-compose.yml
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ app_dir }}/docker-compose.yml"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: "0640"
+  notify: Redémarrer AfriPay
+
+- name: Se connecter à GitHub Container Registry
+  community.docker.docker_login:
+    registry_url: "{{ ghcr_registry }}"
+    username: "{{ vault_ghcr_user }}"
+    password: "{{ vault_ghcr_token }}"
+  no_log: true
+
+- name: Tirer les images Docker
+  community.docker.docker_image:
+    name: "{{ image_api }}"
+    tag: "{{ image_tag }}"
+    source: pull
+    force_source: true
+
+- name: Démarrer la stack Docker Compose
+  community.docker.docker_compose_v2:
+    project_src: "{{ app_dir }}"
+    state: present
+    pull: missing
+  register: compose_result
+
+- name: Attendre que l'API soit prête
+  ansible.builtin.uri:
+    url: "http://localhost:{{ app_port }}/health"
+    method: GET
+    status_code: 200
+    timeout: 10
+  register: health
+  retries: 18
+  delay: 5
+  until: health.status == 200
+
+- name: Configurer la rotation des logs Docker
+  ansible.builtin.copy:
+    dest: /etc/logrotate.d/afripay-docker
+    content: |
+      /var/lib/docker/containers/*/*.log {
+          rotate 7
+          daily
+          compress
+          missingok
+          delaycompress
+          copytruncate
+      }
+    mode: "0644"
+
+- name: Planifier un backup automatique de la base (cron)
+  ansible.builtin.cron:
+    name: "AfriPay PostgreSQL backup"
+    user: "{{ app_user }}"
+    minute: "0"
+    hour: "2"
+    job: >
+      cd {{ app_dir }} &&
+      docker compose exec -T postgres-live
+      pg_dump -U {{ postgres_user }} {{ postgres_live_db }}
+      | gzip > {{ app_dir }}/backups/live_$(date +\%Y\%m\%d).sql.gz
+      && find {{ app_dir }}/backups -name '*.sql.gz' -mtime +7 -delete

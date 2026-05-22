@@ -1,0 +1,50 @@
+groups:
+  - name: afripay.api
+    rules:
+      - alert: APIDown
+        expr: up{job="afripay-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "AfriPay API indisponible"
+          description: "L'API AfriPay ne répond plus depuis 1 minute."
+
+      - alert: HighErrorRate
+        expr: |
+          rate(http_server_request_duration_seconds_count{status_code=~"5.."}[5m])
+          / rate(http_server_request_duration_seconds_count[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Taux d'erreur 5xx élevé (> 5%)"
+
+      - alert: HighLatency
+        expr: |
+          histogram_quantile(0.95,
+            rate(http_server_request_duration_seconds_bucket[5m])
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Latence P95 > 2s"
+
+  - name: afripay.database
+    rules:
+      - alert: PostgresDown
+        expr: up{job="postgres-live"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL Live indisponible"
+
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis indisponible"

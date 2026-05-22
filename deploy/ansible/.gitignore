@@ -1,0 +1,16 @@
+# Secrets chiffrés non versionnés tant que non chiffrés par Vault
+*.retry
+inventory/*/group_vars/vault.yml
+!inventory/*/group_vars/vault.yml.example
+
+# Clés SSH
+*.pem
+*.key
+id_rsa*
+
+# Cache Ansible
+.ansible/
+/tmp/ansible_facts/
+
+# Logs
+*.log

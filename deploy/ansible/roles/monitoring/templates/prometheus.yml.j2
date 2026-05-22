@@ -1,0 +1,32 @@
+global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
+  external_labels:
+    env: production
+    app: afripay
+
+rule_files:
+  - "alert-rules.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
+scrape_configs:
+  - job_name: afripay-api
+    static_configs:
+      - targets: ["afripay-api:{{ app_port }}"]
+    metrics_path: /metrics
+
+  - job_name: postgres-live
+    static_configs:
+      - targets: ["postgres-live:5432"]
+
+  - job_name: redis
+    static_configs:
+      - targets: ["redis:{{ port_redis }}"]
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:{{ port_prometheus }}"]

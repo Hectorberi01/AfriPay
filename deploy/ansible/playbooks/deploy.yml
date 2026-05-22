@@ -1,0 +1,142 @@
+---
+#  deploy.yml — Déploiement de l'application AfriPay
+#
+#  Usage :
+#    ansible-playbook playbooks/deploy.yml
+#    ansible-playbook playbooks/deploy.yml -e "image_tag=sha-abc1234"
+#    ansible-playbook playbooks/deploy.yml --tags migrate,restart
+
+- name: Déployer AfriPay
+  hosts: api
+  become: true
+  serial: 1        # rolling update serveur par serveur
+
+  vars_files:
+    - "{{ inventory_dir }}/group_vars/vault.yml"
+
+  vars:
+    deploy_timestamp: "{{ ansible_date_time.iso8601 }}"
+
+  pre_tasks:
+    - name: Afficher la version déployée
+      ansible.builtin.debug:
+        msg: "Déploiement de l'image {{ image_api }}:{{ image_tag }} sur {{ inventory_hostname }}"
+      tags: always
+
+    - name: S'assurer que le répertoire de l'application existe
+      ansible.builtin.file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: "0750"
+      tags: always
+
+  tasks:
+    # 1. Connexion au registre GHCR 
+    - name: Se connecter à GitHub Container Registry
+      community.docker.docker_login:
+        registry_url: "{{ ghcr_registry }}"
+        username: "{{ vault_ghcr_user }}"
+        password: "{{ vault_ghcr_token }}"
+      tags: [pull, docker]
+
+    # 2. Copier les fichiers de configuration
+    - name: Déployer le fichier .env
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../roles/afripay/templates/.env.j2"
+        dest: "{{ app_dir }}/.env"
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: "0600"
+      tags: [config]
+      no_log: true
+
+    - name: Déployer docker-compose.yml
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../roles/afripay/templates/docker-compose.yml.j2"
+        dest: "{{ app_dir }}/docker-compose.yml"
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: "0640"
+      tags: [config]
+
+    # Tirer les nouvelles images
+    - name: Tirer l'image API
+      community.docker.docker_image:
+        name: "{{ image_api }}"
+        tag: "{{ image_tag }}"
+        source: pull
+        force_source: true
+      tags: [pull]
+
+    # Appliquer les migrations EF Core 
+    - name: Appliquer les migrations (LiveDb)
+      community.docker.docker_container:
+        name: afripay-migrate-live
+        image: "{{ image_api }}:{{ image_tag }}"
+        command: dotnet AfriPay.dll migrate live
+        env_file: "{{ app_dir }}/.env"
+        networks:
+          - name: afripay-net
+        detach: false
+        cleanup: true
+        restart_policy: "no"
+      register: migration_live
+      tags: [migrate]
+
+    - name: Appliquer les migrations (SandboxDb)
+      community.docker.docker_container:
+        name: afripay-migrate-sandbox
+        image: "{{ image_api }}:{{ image_tag }}"
+        command: dotnet AfriPay.dll migrate sandbox
+        env_file: "{{ app_dir }}/.env"
+        networks:
+          - name: afripay-net
+        detach: false
+        cleanup: true
+        restart_policy: "no"
+      register: migration_sandbox
+      tags: [migrate]
+
+    - name: Afficher les résultats des migrations
+      ansible.builtin.debug:
+        msg: "Migrations Live OK | Sandbox OK"
+      tags: [migrate]
+
+    # Rolling update du conteneur API 
+    - name: Redémarrer le service API (rolling)
+      community.docker.docker_compose_v2:
+        project_src: "{{ app_dir }}"
+        services: [afripay-api]
+        pull: never
+        recreate: always
+        remove_orphans: false
+      tags: [restart]
+
+    # Health check post-déploiement
+    - name: Attendre que l'API réponde
+      ansible.builtin.uri:
+        url: "http://localhost:{{ app_port }}/health"
+        method: GET
+        status_code: 200
+        timeout: 10
+      register: health
+      retries: 12
+      delay: 5
+      until: health.status == 200
+      tags: [healthcheck]
+
+    # Nettoyage des images obsolètes
+    - name: Supprimer les images Docker inutilisées
+      community.docker.docker_prune:
+        images: true
+        images_filters:
+          dangling: true
+      tags: [cleanup]
+
+  post_tasks:
+    - name: Déploiement terminé
+      ansible.builtin.debug:
+        msg: " {{ image_api }}:{{ image_tag }} déployé avec succès sur {{ inventory_hostname }} à {{ deploy_timestamp }}"
+      tags: always

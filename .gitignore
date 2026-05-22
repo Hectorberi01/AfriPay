@@ -1,0 +1,11 @@
+bin/
+obj/
+/packages/
+riderModule.iml
+/_ReSharper.Caches/
+.claude
+.dockerignore
+.idea
+appsettings.Development.json
+appsettings.Production.json
+appsettings.secrets.json

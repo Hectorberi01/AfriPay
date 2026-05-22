@@ -1,0 +1,36 @@
+/* AfriPay — Swagger UI custom theme */
+
+:root {
+  --afripay-orange: #C94F1A;
+  --afripay-dark: #1A1916;
+  --afripay-gray: #F3F1EC;
+}
+
+/* Header */
+.topbar { background-color: var(--afripay-dark) !important; }
+.topbar-wrapper img { content: none; }
+.topbar-wrapper::after {
+  content: "AfriPay API";
+  color: var(--afripay-orange);
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: -0.5px;
+}
+
+/* Info block */
+.info .title { color: var(--afripay-dark); }
+.info .title small.version-stamp { background: var(--afripay-orange); }
+
+/* Method badges */
+.opblock-summary-method { font-weight: 700 !important; }
+.opblock.opblock-post .opblock-summary-method { background: #2D7A4F !important; }
+.opblock.opblock-get  .opblock-summary-method { background: #1E5FA0 !important; }
+.opblock.opblock-delete .opblock-summary-method { background: #A02020 !important; }
+.opblock.opblock-put .opblock-summary-method { background: #7A5A1E !important; }
+
+/* Execute button */
+.btn.execute { background: var(--afripay-orange) !important; border-color: var(--afripay-orange) !important; }
+.btn.execute:hover { background: #A03A10 !important; }
+
+/* Authorize button */
+.btn.authorize { border-color: var(--afripay-orange) !important; color: var(--afripay-orange) !important; }

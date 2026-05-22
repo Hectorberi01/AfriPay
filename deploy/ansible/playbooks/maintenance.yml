@@ -1,0 +1,59 @@
+---
+#  maintenance.yml — Activer / désactiver le mode maintenance
+#
+#  Usage :
+#    ansible-playbook playbooks/maintenance.yml -e "maintenance=on"
+#    ansible-playbook playbooks/maintenance.yml -e "maintenance=off"
+
+- name: Mode maintenance AfriPay
+  hosts: api
+  become: true
+
+  vars:
+    maintenance: "{{ maintenance | default('on') }}"
+
+  tasks:
+    - name: Activer le mode maintenance (page 503)
+      ansible.builtin.copy:
+        dest: /etc/nginx/conf.d/maintenance.conf
+        content: |
+          # Mode maintenance activé le {{ ansible_date_time.iso8601 }}
+          server {
+              listen 80 default_server;
+              listen 443 ssl default_server;
+              server_name _;
+
+              return 503;
+
+              error_page 503 /maintenance.html;
+              location = /maintenance.html {
+                  root /var/www/html;
+                  internal;
+              }
+
+              # Health check exempt
+              location = /health {
+                  return 200 '{"status":"maintenance"}';
+                  add_header Content-Type application/json;
+              }
+          }
+        mode: "0644"
+      when: maintenance == 'on'
+      notify: Recharger Nginx
+
+    - name: Désactiver le mode maintenance
+      ansible.builtin.file:
+        path: /etc/nginx/conf.d/maintenance.conf
+        state: absent
+      when: maintenance == 'off'
+      notify: Recharger Nginx
+
+    - name: Statut maintenance
+      ansible.builtin.debug:
+        msg: "Mode maintenance : {{ 'ACTIVÉ ' if maintenance == 'on' else 'DÉSACTIVÉ ' }}"
+
+  handlers:
+    - name: Recharger Nginx
+      ansible.builtin.service:
+        name: nginx
+        state: reloaded

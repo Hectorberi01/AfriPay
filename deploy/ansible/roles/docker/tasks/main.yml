@@ -1,0 +1,83 @@
+---
+# ── Rôle docker — Installation de Docker CE + Docker Compose V2 ─
+
+- name: Supprimer les anciennes versions de Docker
+  ansible.builtin.apt:
+    name:
+      - docker
+      - docker-engine
+      - docker.io
+      - containerd
+      - runc
+    state: absent
+
+- name: Ajouter la clé GPG officielle Docker
+  ansible.builtin.apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+- name: Ajouter le dépôt Docker
+  ansible.builtin.apt_repository:
+    repo: >
+      deb [arch=amd64]
+      https://download.docker.com/linux/ubuntu
+      {{ ansible_distribution_release }} stable
+    state: present
+    filename: docker
+
+- name: Installer Docker CE
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+    update_cache: true
+  notify: Démarrer Docker
+
+- name: Activer Docker au démarrage
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Installer le module Python docker
+  ansible.builtin.pip:
+    name:
+      - docker
+      - docker-compose
+    state: present
+
+- name: Configurer le daemon Docker
+  ansible.builtin.copy:
+    dest: /etc/docker/daemon.json
+    content: |
+      {
+        "log-driver": "json-file",
+        "log-opts": {
+          "max-size": "50m",
+          "max-file": "5"
+        },
+        "live-restore": true,
+        "userland-proxy": false,
+        "storage-driver": "overlay2"
+      }
+    mode: "0644"
+  notify: Redémarrer Docker
+
+- name: Créer le réseau Docker afripay-net
+  community.docker.docker_network:
+    name: afripay-net
+    driver: bridge
+    state: present
+
+- name: Vérifier la version Docker
+  ansible.builtin.command: docker --version
+  register: docker_version
+  changed_when: false
+
+- name: Afficher la version installée
+  ansible.builtin.debug:
+    msg: "{{ docker_version.stdout }}"

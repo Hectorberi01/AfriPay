@@ -1,0 +1,59 @@
+---
+#  rollback.yml — Revenir à la version précédente
+#
+#  Usage :
+#    ansible-playbook playbooks/rollback.yml -e "rollback_tag=sha-abc1234"
+
+- name: Rollback AfriPay vers une version précédente
+  hosts: api
+  become: true
+
+  vars_files:
+    - "{{ inventory_dir }}/group_vars/vault.yml"
+
+  vars:
+    rollback_tag: "{{ rollback_tag | mandatory('Fournir le tag : -e rollback_tag=sha-xxxxx') }}"
+
+  tasks:
+    - name: Confirmer le rollback
+      ansible.builtin.pause:
+        prompt: " Rollback vers {{ image_api }}:{{ rollback_tag }} sur {{ inventory_hostname }}. Confirmer ? (yes/no)"
+      register: confirm
+      when: not ansible_check_mode
+
+    - name: Annuler si non confirmé
+      ansible.builtin.fail:
+        msg: "Rollback annulé."
+      when: confirm.user_input | default('no') != 'yes' and not ansible_check_mode
+
+    - name: Mettre à jour image_tag pour le rollback
+      ansible.builtin.set_fact:
+        image_tag: "{{ rollback_tag }}"
+
+    - name: Tirer l'image de rollback
+      community.docker.docker_image:
+        name: "{{ image_api }}"
+        tag: "{{ rollback_tag }}"
+        source: pull
+        force_source: true
+
+    - name: Redémarrer l'API avec la version précédente
+      community.docker.docker_compose_v2:
+        project_src: "{{ app_dir }}"
+        services: [afripay-api]
+        pull: never
+        recreate: always
+
+    - name: Vérifier la santé après rollback
+      ansible.builtin.uri:
+        url: "http://localhost:{{ app_port }}/health"
+        method: GET
+        status_code: 200
+      register: health
+      retries: 10
+      delay: 5
+      until: health.status == 200
+
+    - name: Rollback terminé
+      ansible.builtin.debug:
+        msg: "Rollback vers {{ rollback_tag }} effectué sur {{ inventory_hostname }}"

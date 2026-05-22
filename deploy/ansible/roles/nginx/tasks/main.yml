@@ -1,0 +1,64 @@
+---
+# Rôle nginx — Reverse proxy + TLS
+
+- name: Installer Nginx
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+    update_cache: true
+
+- name: Supprimer la config par défaut
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Recharger Nginx
+
+- name: Déployer la config AfriPay API
+  ansible.builtin.template:
+    src: afripay-api.conf.j2
+    dest: /etc/nginx/sites-available/afripay-api.conf
+    mode: "0644"
+  notify: Recharger Nginx
+
+- name: Activer le vhost AfriPay API
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/afripay-api.conf
+    dest: /etc/nginx/sites-enabled/afripay-api.conf
+    state: link
+  notify: Recharger Nginx
+
+- name: Déployer la config monitoring
+  ansible.builtin.template:
+    src: afripay-monitoring.conf.j2
+    dest: /etc/nginx/sites-available/afripay-monitoring.conf
+    mode: "0644"
+  notify: Recharger Nginx
+
+- name: Activer le vhost monitoring
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/afripay-monitoring.conf
+    dest: /etc/nginx/sites-enabled/afripay-monitoring.conf
+    state: link
+  notify: Recharger Nginx
+
+- name: Créer le répertoire de la page de maintenance
+  ansible.builtin.file:
+    path: /var/www/html
+    state: directory
+    mode: "0755"
+
+- name: Déployer la page de maintenance
+  ansible.builtin.template:
+    src: maintenance.html.j2
+    dest: /var/www/html/maintenance.html
+    mode: "0644"
+
+- name: Vérifier la configuration Nginx
+  ansible.builtin.command: nginx -t
+  changed_when: false
+
+- name: Démarrer et activer Nginx
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: true

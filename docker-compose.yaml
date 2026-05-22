@@ -1,0 +1,163 @@
+﻿version: "3.9"
+
+# AfriPay — Docker Compose Production Stack
+#
+# Services :
+#   afripay-api    → ASP.NET Core 9 API (port 8080)
+#   postgres-live  → PostgreSQL afripay_live
+#   postgres-sand  → PostgreSQL afripay_sandbox
+#   redis          → Cache + Rate limiting
+#
+# Usage :
+#   docker compose up -d
+#   docker compose logs -f afripay-api
+
+services:
+
+  afripay-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: afripay-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT:    Production
+      ASPNETCORE_URLS:           http://+:8080
+
+      # Bases de données
+      ConnectionStrings__AfriPayLive:    "Host=postgres-live;Port=5432;Database=afripay_live;Username=afripay;Password=${POSTGRES_PASSWORD}"
+      ConnectionStrings__AfriPaySandbox: "Host=postgres-sand;Port=5432;Database=afripay_sandbox;Username=afripay;Password=${POSTGRES_PASSWORD}"
+
+      # JWT
+      Jwt__Secret:           ${JWT_SECRET}
+      Jwt__Issuer:           AfriPay
+      Jwt__Audience:         AfriPay
+      Jwt__ExpiresInMinutes: "15"
+
+      # Redis
+      Redis__ConnectionString: "redis:6379,password=${REDIS_PASSWORD},ssl=false"
+
+      # SendGrid
+      SendGrid__ApiKey:    ${SENDGRID_API_KEY}
+      SendGrid__FromEmail: noreply@afripay.io
+      SendGrid__FromName:  AfriPay
+
+      # Providers
+      Providers__MtnMomo__LiveBaseUrl:       https://proxy.momoapi.mtn.com
+      Providers__MtnMomo__SandboxBaseUrl:    https://sandbox.momodeveloper.mtn.com
+      Providers__MtnMomo__LiveSubscriptionKey:    ${MTN_LIVE_SUBSCRIPTION_KEY}
+      Providers__MtnMomo__SandboxSubscriptionKey: ${MTN_SANDBOX_SUBSCRIPTION_KEY}
+
+      Providers__PayPal__LiveBaseUrl:    https://api-m.paypal.com/
+      Providers__PayPal__SandboxBaseUrl: https://api-m.sandbox.paypal.com/
+      Providers__PayPal__LiveClientId:   ${PAYPAL_LIVE_CLIENT_ID}
+      Providers__PayPal__LiveSecret:     ${PAYPAL_LIVE_SECRET}
+      Providers__PayPal__SandboxClientId: ${PAYPAL_SANDBOX_CLIENT_ID}
+      Providers__PayPal__SandboxSecret:  ${PAYPAL_SANDBOX_SECRET}
+
+      Providers__Stripe__LiveSecretKey:    ${STRIPE_LIVE_SECRET_KEY}
+      Providers__Stripe__SandboxSecretKey: ${STRIPE_TEST_SECRET_KEY}
+
+      # Serilog
+      Serilog__MinimumLevel__Default: Information
+      Serilog__MinimumLevel__Override__Microsoft: Warning
+      Serilog__MinimumLevel__Override__Microsoft.EntityFrameworkCore: Warning
+
+    depends_on:
+      postgres-live:
+        condition: service_healthy
+      postgres-sand:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - afripay-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # PostgreSQL Live
+  postgres-live:
+    image: postgres:16-alpine
+    container_name: afripay-postgres-live
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       afripay_live
+      POSTGRES_USER:     afripay
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA:            /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_live_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"   # exposé uniquement en dev
+    networks:
+      - afripay-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U afripay -d afripay_live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL Sandbox 
+  postgres-sand:
+    image: postgres:16-alpine
+    container_name: afripay-postgres-sandbox
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       afripay_sandbox
+      POSTGRES_USER:     afripay
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA:            /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_sand_data:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
+    networks:
+      - afripay-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U afripay -d afripay_sandbox"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis 
+  redis:
+    image: redis:7-alpine
+    container_name: afripay-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD}
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save 60 1000
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - afripay-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# VOLUMES & NETWORKS
+
+volumes:
+  postgres_live_data:
+    driver: local
+  postgres_sand_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  afripay-net:
+    driver: bridge
