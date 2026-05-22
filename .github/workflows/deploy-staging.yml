@@ -87,6 +87,18 @@ jobs:
           echo "${{ secrets.ANSIBLE_VAULT_PASS }}" > ~/.ansible/vault_pass
           chmod 600 ~/.ansible/vault_pass
 
+      - name: Verify vault access
+        working-directory: deploy/ansible
+        run: |
+          if [ -z "$(cat ~/.ansible/vault_pass)" ]; then
+            echo "::error::ANSIBLE_VAULT_PASS secret is empty or not set in GitHub"
+            exit 1
+          fi
+          ansible-vault view inventory/staging/group_vars/vault.yml \
+            --vault-password-file ~/.ansible/vault_pass > /dev/null \
+            && echo "Vault OK" \
+            || { echo "::error::Wrong vault password — check ANSIBLE_VAULT_PASS secret"; exit 1; }
+
       - name: Deploy to staging
         working-directory: deploy/ansible
         env:
