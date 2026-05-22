@@ -12,7 +12,7 @@ app_port: 8080
 # Images Docker
 ghcr_registry: ghcr.io
 ghcr_repo: "{{ lookup('env', 'GITHUB_REPOSITORY') | default('Hectorberi01/AfriPay') }}"
-image_api: "{{ ghcr_registry }}/{{ ghcr_repo }}/afripay-api"
+image_api: "{{ ghcr_registry }}/{{ ghcr_repo | lower }}/afripay-api"
 image_tag: "{{ lookup('env', 'IMAGE_TAG') | default('develop') }}"
 
 # SSH (clé dédiée staging)
