@@ -74,7 +74,7 @@
       community.docker.docker_compose_v2:
         project_src: "{{ app_dir }}"
         services: [postgres-live, postgres-sand, redis]
-        pull: never
+        pull: missing
         state: present
       tags: [migrate, restart]
 
