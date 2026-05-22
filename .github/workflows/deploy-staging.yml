@@ -94,7 +94,7 @@ jobs:
             echo "::error::ANSIBLE_VAULT_PASS secret is empty or not set in GitHub"
             exit 1
           fi
-          ansible-vault view inventory/staging/group_vars/vault.yml \
+          ansible-vault view inventory/staging/group_vars/all/vault.yml \
             --vault-password-file ~/.ansible/vault_pass > /dev/null \
             && echo "Vault OK" \
             || { echo "::error::Wrong vault password — check ANSIBLE_VAULT_PASS secret"; exit 1; }
