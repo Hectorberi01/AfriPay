@@ -83,6 +83,7 @@ jobs:
 
       - name: Configure Ansible Vault password
         run: |
+          mkdir -p ~/.ansible
           echo "${{ secrets.ANSIBLE_VAULT_PASS }}" > ~/.ansible/vault_pass
           chmod 600 ~/.ansible/vault_pass
 
