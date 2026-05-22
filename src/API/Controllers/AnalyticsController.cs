@@ -11,7 +11,6 @@ namespace AfriPay.API.Controllers;
 [Produces("application/json")]
 public sealed class AnalyticsController(IAnalyticsService analytics) : ControllerBase
 {
-    // GET /v1/analytics/summary?currency=XOF&from=2026-01-01&to=2026-12-31
     [HttpGet("summary")]
     public async Task<IActionResult> Summary(
         [FromQuery] string         currency = "XOF",
@@ -34,7 +33,6 @@ public sealed class AnalyticsController(IAnalyticsService analytics) : Controlle
             onError:   error => error.ToActionResult());
     }
  
-    // GET /v1/analytics/payouts?currency=XOF
     [HttpGet("payouts")]
     public async Task<IActionResult> PayoutSummary(
         [FromQuery] string currency = "XOF",

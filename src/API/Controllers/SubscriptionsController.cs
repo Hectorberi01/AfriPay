@@ -29,7 +29,6 @@ public sealed class SubscriptionsController(ISubscriptionService subscriptions) 
             onError:   error => error.ToActionResult());
     }
  
-    // GET /v1/subscriptions/plans
     [HttpGet("plans")]
     public async Task<IActionResult> ListPlans(CancellationToken ct)
     {
@@ -42,7 +41,6 @@ public sealed class SubscriptionsController(ISubscriptionService subscriptions) 
     }
  
     // Subscriptions 
-    // POST /v1/subscriptions
     [HttpPost]
     public async Task<IActionResult> Create(
         [FromBody] CreateSubscriptionRequest request,
@@ -60,7 +58,6 @@ public sealed class SubscriptionsController(ISubscriptionService subscriptions) 
             onError:   error => error.ToActionResult());
     }
  
-    // GET /v1/subscriptions/{subscriptionId}
     [HttpGet("{subscriptionId:guid}")]
     public async Task<IActionResult> Get(Guid subscriptionId, CancellationToken ct)
     {

@@ -13,7 +13,6 @@ namespace AfriPay.API.Controllers;
 [Produces("application/json")]
 public sealed class TeamController(IEmployeeService employees) : ControllerBase
 {
-    // GET /v1/team
     [HttpGet]
     [Authorize]
     public async Task<IActionResult> List(
@@ -28,7 +27,6 @@ public sealed class TeamController(IEmployeeService employees) : ControllerBase
             onError:   error => error.ToActionResult());
     }
  
-    // GET /v1/team/{employeeId}
     [HttpGet("{employeeId:guid}")]
     [Authorize]
     public async Task<IActionResult> Get(Guid employeeId, CancellationToken ct)
@@ -41,7 +39,6 @@ public sealed class TeamController(IEmployeeService employees) : ControllerBase
             onError:   error => error.ToActionResult());
     }
  
-    // POST /v1/team
     [HttpPost]
     [Authorize]
     public async Task<IActionResult> Create(
@@ -62,7 +59,6 @@ public sealed class TeamController(IEmployeeService employees) : ControllerBase
             onError:   error => error.ToActionResult());
     }
  
-    // PUT /v1/team/{employeeId}
     [HttpPut("{employeeId:guid}")]
     [Authorize]
     public async Task<IActionResult> Update(
@@ -82,7 +78,6 @@ public sealed class TeamController(IEmployeeService employees) : ControllerBase
             onError:   error => error.ToActionResult());
     }
  
-    // POST /v1/team/{employeeId}/suspend
     [HttpPost("{employeeId:guid}/suspend")]
     [Authorize]
     public async Task<IActionResult> Suspend(Guid employeeId, CancellationToken ct)
@@ -95,7 +90,6 @@ public sealed class TeamController(IEmployeeService employees) : ControllerBase
             onError:   error => error.ToActionResult());
     }
  
-    // POST /v1/team/{employeeId}/reactivate
     [HttpPost("{employeeId:guid}/reactivate")]
     [Authorize]
     public async Task<IActionResult> Reactivate(Guid employeeId, CancellationToken ct)

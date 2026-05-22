@@ -12,7 +12,6 @@ namespace AfriPay.API.Controllers;
 [Produces("application/json")]
 public sealed class WebhooksController(IWebhookService webhooks) : ControllerBase
 {
-    // GET /v1/webhooks
     [HttpGet("v1/webhooks")]
     public async Task<IActionResult> List(
         [FromQuery] int page     = 1,
@@ -41,7 +40,6 @@ public sealed class WebhooksController(IWebhookService webhooks) : ControllerBas
             onError: error => error.ToActionResult());
     }
 
-    // POST /v1/webhooks/{deliveryId}/retry
     [HttpPost("v1/webhooks/{deliveryId:guid}/retry")]
     public async Task<IActionResult> Retry(Guid deliveryId, CancellationToken ct)
     {
@@ -56,7 +54,6 @@ public sealed class WebhooksController(IWebhookService webhooks) : ControllerBas
             onError: error => error.ToActionResult());
     }
 
-    // POST /webhooks/providers/{provider} — route publique
     [HttpPost("webhooks/providers/{provider}")]
     public async Task<IActionResult> ReceiveProviderCallback(string provider, [FromServices] PayPalWebhookHandler paypalHandler, CancellationToken ct)
     {
