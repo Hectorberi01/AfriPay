@@ -11,7 +11,6 @@ namespace AfriPay.API.Controllers;
 [Produces("application/json")]
 public sealed class AuditController(IAuditService audit) : ControllerBase
 {
-    // GET /v1/audit?action=PaymentCompleted&from=2026-01-01
     [HttpGet]
     public async Task<IActionResult> List(
         [FromQuery] string?         action   = null,
@@ -31,7 +30,6 @@ public sealed class AuditController(IAuditService audit) : ControllerBase
             onError:   error => error.ToActionResult());
     }
  
-    // GET /v1/audit/payments/{paymentId}
     [HttpGet("payments/{paymentId}")]
     public async Task<IActionResult> GetPaymentHistory(
         string paymentId, CancellationToken ct)

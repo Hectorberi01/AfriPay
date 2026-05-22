@@ -26,7 +26,6 @@ public sealed class AdminController(
 {
     // Merchants
  
-    // GET /v1/admin/merchants?status=active&plan=growth
     [HttpGet("merchants")]
     public async Task<IActionResult> ListMerchants(
         [FromQuery] string? status   = null,
@@ -43,7 +42,6 @@ public sealed class AdminController(
             onError:   error => error.ToActionResult());
     }
  
-    // POST /v1/admin/merchants/{merchantId}/suspend
     [HttpPost("merchants/{merchantId:guid}/suspend")]
     public async Task<IActionResult> Suspend(
         Guid merchantId,
@@ -58,7 +56,6 @@ public sealed class AdminController(
             onError:   e => e.ToActionResult());
     }
  
-    // POST /v1/admin/merchants/{merchantId}/reactivate
     [HttpPost("merchants/{merchantId:guid}/reactivate")]
     public async Task<IActionResult> Reactivate(
         Guid merchantId,
@@ -73,7 +70,6 @@ public sealed class AdminController(
             onError:   e => e.ToActionResult());
     }
  
-    // PUT /v1/admin/merchants/{merchantId}/plan
     [HttpPut("merchants/{merchantId:guid}/plan")]
     public async Task<IActionResult> ChangePlan(
         Guid merchantId,
@@ -120,7 +116,6 @@ public sealed class AdminController(
             onError:   error => error.ToActionResult());
     }
  
-    // POST /v1/admin/kyb/{kybId}/approve
     [HttpPost("kyb/{kybId:guid}/approve")]
     public async Task<IActionResult> ApproveKyb(
         Guid kybId, [FromBody] KybReviewRequest request, CancellationToken ct)
@@ -133,7 +128,6 @@ public sealed class AdminController(
             onError:   error => error.ToActionResult());
     }
  
-    // POST /v1/admin/kyb/{kybId}/reject
     [HttpPost("kyb/{kybId:guid}/reject")]
     public async Task<IActionResult> RejectKyb(
         Guid kybId, [FromBody] KybReviewRequest request, CancellationToken ct)
@@ -165,7 +159,6 @@ public sealed class AdminController(
  
     //Disputes (admin)
  
-    // POST /v1/admin/disputes
     [HttpPost("disputes")]
     public async Task<IActionResult> OpenDispute(
         [FromBody] OpenDisputeAdminRequest request, CancellationToken ct)
@@ -181,7 +174,6 @@ public sealed class AdminController(
             onError:   error => error.ToActionResult());
     }
  
-    // POST /v1/admin/disputes/{disputeId}/resolve
     [HttpPost("disputes/{disputeId:guid}/resolve")]
     public async Task<IActionResult> ResolveDispute(
         Guid disputeId, [FromBody] ResolveDisputeRequest request, CancellationToken ct)

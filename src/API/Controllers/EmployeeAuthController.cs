@@ -11,7 +11,6 @@ namespace AfriPay.API.Controllers;
 [Produces("application/json")]
 public sealed class EmployeeAuthController(IEmployeeService employees) : ControllerBase
 {
-    // POST /v1/auth/employee/login
     [HttpPost("login")]
     [AllowAnonymous]
     public async Task<IActionResult> Login(

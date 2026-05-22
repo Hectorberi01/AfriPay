@@ -10,7 +10,6 @@ namespace AfriPay.API.Controllers;
 [Produces("application/json")]
 public sealed class StaffAuthController(IStaffService staff) : ControllerBase
 {
-    // POST /v1/auth/staff/login
     [HttpPost("v1/auth/staff/login")]
     [AllowAnonymous]
     public async Task<IActionResult> Login(

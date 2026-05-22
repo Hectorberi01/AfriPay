@@ -24,7 +24,6 @@ namespace AfriPay.API.Controllers;
 [Produces("application/json")]
 public sealed class PaymentsController(IPaymentService paymentService) : ControllerBase
 {
-    // POST /v1/payments/initiate
 
     /// <summary>Initie un nouveau paiement.</summary>
     /// <remarks>
@@ -62,7 +61,6 @@ public sealed class PaymentsController(IPaymentService paymentService) : Control
             onError:   error  => error.ToActionResult());
     }
 
-    // GET /v1/payments/{paymentId}
 
     /// <summary>Retourne le détail d'un paiement.</summary>
     [HttpGet("{paymentId:guid}")]
@@ -78,7 +76,6 @@ public sealed class PaymentsController(IPaymentService paymentService) : Control
             onError:   error => error.ToActionResult());
     }
 
-    // DELETE /v1/payments/{paymentId}
 
     /// <summary>
     /// Annule un paiement en statut <c>pending</c>.
@@ -98,7 +95,6 @@ public sealed class PaymentsController(IPaymentService paymentService) : Control
             onError:   error => error.ToActionResult());
     }
 
-    // GET /v1/payments
 
     /// <summary>
     /// Liste paginée des paiements du marchand.

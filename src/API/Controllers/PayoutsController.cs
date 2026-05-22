@@ -12,7 +12,6 @@ namespace AfriPay.API.Controllers;
 [Produces("application/json")]
 public sealed class PayoutsController(IPayoutService payouts) : ControllerBase
 {
-    // POST /v1/payouts
     [HttpPost]
     public async Task<IActionResult> Create(
         [FromBody] CreatePayoutRequest request,
@@ -36,7 +35,6 @@ public sealed class PayoutsController(IPayoutService payouts) : ControllerBase
             onError:   error => error.ToActionResult());
     }
  
-    // GET /v1/payouts/{payoutId}
     [HttpGet("{payoutId:guid}")]
     public async Task<IActionResult> Get(Guid payoutId, CancellationToken ct)
     {
@@ -48,7 +46,6 @@ public sealed class PayoutsController(IPayoutService payouts) : ControllerBase
             onError:   error => error.ToActionResult());
     }
  
-    // GET /v1/payouts?status=pending&page=1
     [HttpGet]
     public async Task<IActionResult> List(
         [FromQuery] string? status   = null,
@@ -66,7 +63,6 @@ public sealed class PayoutsController(IPayoutService payouts) : ControllerBase
             onError:   error => error.ToActionResult());
     }
  
-    // DELETE /v1/payouts/{payoutId}
     [HttpDelete("{payoutId:guid}")]
     public async Task<IActionResult> Cancel(
         Guid payoutId,
