@@ -69,7 +69,25 @@
         force_source: true
       tags: [pull]
 
-    # Appliquer les migrations EF Core 
+    # Démarrer l'infrastructure (postgres + redis) avant les migrations
+    - name: Démarrer les services d'infrastructure
+      community.docker.docker_compose_v2:
+        project_src: "{{ app_dir }}"
+        services: [postgres-live, postgres-sand, redis]
+        pull: never
+        state: present
+      tags: [migrate, restart]
+
+    - name: Attendre que postgres-live soit prêt
+      community.docker.docker_container_info:
+        name: afripay-postgres-live
+      register: pg_live_info
+      retries: 12
+      delay: 5
+      until: pg_live_info.container.State.Health.Status == 'healthy'
+      tags: [migrate, restart]
+
+    # Appliquer les migrations EF Core
     - name: Appliquer les migrations (LiveDb)
       community.docker.docker_container:
         name: afripay-migrate-live
