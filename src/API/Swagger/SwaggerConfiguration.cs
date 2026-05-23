@@ -53,8 +53,8 @@ public static class SwaggerConfiguration
                               """,
                 Contact = new OpenApiContact
                 {
-                    Name = "AfriPay Support",
-                    Email = "support@afripay.io",
+                    Name = "AfriPay API — Développeur Hector ADJAKPA | +33 6 98 36 79 19",
+                    Email = "hector.adjakpa@gmail.com",
                     Url = new Uri("https://docs.afripay.io"),
                 },
                 License = new OpenApiLicense
