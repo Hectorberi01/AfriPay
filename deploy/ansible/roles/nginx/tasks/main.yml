@@ -11,35 +11,12 @@
   ansible.builtin.file:
     path: /etc/nginx/sites-enabled/default
     state: absent
-  notify: Recharger Nginx
 
-- name: Déployer la config AfriPay API
-  ansible.builtin.template:
-    src: afripay-api.conf.j2
-    dest: /etc/nginx/sites-available/afripay-api.conf
-    mode: "0644"
-  notify: Recharger Nginx
-
-- name: Activer le vhost AfriPay API
+- name: Créer le répertoire webroot pour certbot
   ansible.builtin.file:
-    src: /etc/nginx/sites-available/afripay-api.conf
-    dest: /etc/nginx/sites-enabled/afripay-api.conf
-    state: link
-  notify: Recharger Nginx
-
-- name: Déployer la config monitoring
-  ansible.builtin.template:
-    src: afripay-monitoring.conf.j2
-    dest: /etc/nginx/sites-available/afripay-monitoring.conf
-    mode: "0644"
-  notify: Recharger Nginx
-
-- name: Activer le vhost monitoring
-  ansible.builtin.file:
-    src: /etc/nginx/sites-available/afripay-monitoring.conf
-    dest: /etc/nginx/sites-enabled/afripay-monitoring.conf
-    state: link
-  notify: Recharger Nginx
+    path: /var/www/certbot
+    state: directory
+    mode: "0755"
 
 - name: Créer le répertoire de la page de maintenance
   ansible.builtin.file:
@@ -53,6 +30,55 @@
     dest: /var/www/html/maintenance.html
     mode: "0644"
 
+# Vérifier si le certificat SSL existe déjà
+- name: Vérifier l'existence du certificat SSL
+  ansible.builtin.stat:
+    path: "/etc/letsencrypt/live/{{ domain_api }}/fullchain.pem"
+  register: ssl_cert
+
+# Config HTTP-only si pas de certificat (bootstrap pour certbot)
+- name: Déployer la config HTTP-only (bootstrap)
+  ansible.builtin.template:
+    src: afripay-api-http.conf.j2
+    dest: /etc/nginx/sites-available/afripay-api.conf
+    mode: "0644"
+  when: not ssl_cert.stat.exists
+
+# Config HTTPS complète si le certificat existe
+- name: Déployer la config HTTPS complète
+  ansible.builtin.template:
+    src: afripay-api.conf.j2
+    dest: /etc/nginx/sites-available/afripay-api.conf
+    mode: "0644"
+  when: ssl_cert.stat.exists
+
+- name: Activer le vhost AfriPay API
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/afripay-api.conf
+    dest: /etc/nginx/sites-enabled/afripay-api.conf
+    state: link
+
+# Monitoring uniquement si le certificat existe
+- name: Déployer la config monitoring
+  ansible.builtin.template:
+    src: afripay-monitoring.conf.j2
+    dest: /etc/nginx/sites-available/afripay-monitoring.conf
+    mode: "0644"
+  when: ssl_cert.stat.exists
+
+- name: Activer le vhost monitoring
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/afripay-monitoring.conf
+    dest: /etc/nginx/sites-enabled/afripay-monitoring.conf
+    state: link
+  when: ssl_cert.stat.exists
+
+- name: Désactiver le vhost monitoring (pas de certificat)
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/afripay-monitoring.conf
+    state: absent
+  when: not ssl_cert.stat.exists
+
 - name: Vérifier la configuration Nginx
   ansible.builtin.command: nginx -t
   changed_when: false
@@ -62,3 +88,8 @@
     name: nginx
     state: started
     enabled: true
+
+- name: Recharger Nginx
+  ansible.builtin.service:
+    name: nginx
+    state: reloaded
