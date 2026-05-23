@@ -19,10 +19,10 @@ env:
   DOTNET_VERSION: "9.0.x"
   ANSIBLE_DIR:    deploy/ansible
 
-# ════════════════════════════════════════════════════════════════
+
 jobs:
 
-# ── JOB 1 : Tests unitaires ─────────────────────────────────────
+# JOB 1 : Tests unitaires
   test:
     name: Tests
     runs-on: ubuntu-latest
@@ -80,7 +80,7 @@ jobs:
           directory: ./coverage
           fail_ci_if_error: false
 
-# ── JOB 2 : Build & Push images Docker ─────────────────────────
+# JOB 2 : Build & Push images Docker 
   build:
     name: Docker Build & Push
     runs-on: ubuntu-latest
@@ -156,7 +156,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-# ── JOB 3 : Déploiement Staging (develop) ──────────────────────
+# JOB 3 : Déploiement Staging (develop)
   deploy-staging:
     name: Deploy Staging (Ansible)
     runs-on: ubuntu-latest
@@ -180,8 +180,8 @@ jobs:
       - name: Configurer la clé SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/afripay_prod
-          chmod 600 ~/.ssh/afripay_prod
+          echo "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/afripay_staging
+          chmod 600 ~/.ssh/afripay_staging
           ssh-keyscan -H "${{ secrets.STAGING_HOST }}" >> ~/.ssh/known_hosts
 
       - name: Écrire le mot de passe Ansible Vault
@@ -209,12 +209,12 @@ jobs:
         with:
           payload: |
             {
-              "text": "${{ job.status == 'success' && '✅' || '🚨' }} *Staging* — `${{ needs.build.outputs.image_tag }}` — ${{ job.status == 'success' && 'déployé' || 'ECHEC' }}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Voir les logs>"
+              "text": "${{ job.status == 'success' && '' || '' }} *Staging* — `${{ needs.build.outputs.image_tag }}` — ${{ job.status == 'success' && 'déployé' || 'ECHEC' }}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Voir les logs>"
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
-# ── JOB 4 : Déploiement Production (main) ──────────────────────
+# JOB 4 : Déploiement Production (main)
   deploy-production:
     name: Deploy Production (Ansible)
     runs-on: ubuntu-latest
@@ -280,7 +280,7 @@ jobs:
         with:
           payload: |
             {
-              "text": "✅ *Production* — `${{ needs.build.outputs.image_tag }}` déployé\n*Auteur :* ${{ github.actor }} | *Commit :* `${{ github.sha }}`\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Voir les logs>"
+              "text": " *Production* — `${{ needs.build.outputs.image_tag }}` déployé\n*Auteur :* ${{ github.actor }} | *Commit :* `${{ github.sha }}`\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Voir les logs>"
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
@@ -291,12 +291,12 @@ jobs:
         with:
           payload: |
             {
-              "text": "🚨 *Production DEPLOY FAILED* — `${{ github.sha }}`\n*Auteur :* ${{ github.actor }}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Voir les logs>"
+              "text": " *Production DEPLOY FAILED* — `${{ github.sha }}`\n*Auteur :* ${{ github.actor }}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Voir les logs>"
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
-# ── JOB 5 : Rollback Manuel (workflow_dispatch) ─────────────────
+# JOB 5 : Rollback Manuel (workflow_dispatch) 
   rollback:
     name: Rollback Production (Manuel)
     runs-on: ubuntu-latest
@@ -321,7 +321,6 @@ jobs:
           echo "${{ secrets.PROD_SSH_KEY }}" > ~/.ssh/afripay_prod
           chmod 600 ~/.ssh/afripay_prod
           ssh-keyscan -H "${{ secrets.PROD_HOST }}" >> ~/.ssh/known_hosts
-
       - name: Écrire le mot de passe Ansible Vault
         run: |
           mkdir -p ~/.ansible
@@ -345,7 +344,7 @@ jobs:
         with:
           payload: |
             {
-              "text": "${{ job.status == 'success' && '⏪' || '🚨' }} *Rollback Production* — vers `${{ github.event.inputs.rollback_tag }}` — ${{ job.status == 'success' && 'OK' || 'ECHEC' }}\n*Déclenché par :* ${{ github.actor }}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Voir les logs>"
+              "text": "${{ job.status == 'success' && '' || '' }} *Rollback Production* — vers `${{ github.event.inputs.rollback_tag }}` — ${{ job.status == 'success' && 'OK' || 'ECHEC' }}\n*Déclenché par :* ${{ github.actor }}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Voir les logs>"
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

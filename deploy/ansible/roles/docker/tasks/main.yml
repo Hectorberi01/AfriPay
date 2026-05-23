@@ -1,27 +1,49 @@
 ---
 # ── Rôle docker — Installation de Docker CE + Docker Compose V2 ─
 
-- name: Supprimer les anciennes versions de Docker
+- name: Vérifier si Docker CE est déjà installé
+  ansible.builtin.command: docker --version
+  register: docker_already_installed
+  changed_when: false
+  failed_when: false
+
+- name: Supprimer les anciennes versions de Docker (seulement si Docker CE absent)
   ansible.builtin.apt:
     name:
       - docker
       - docker-engine
       - docker.io
-      - containerd
-      - runc
     state: absent
+  when: docker_already_installed.rc != 0
 
-- name: Ajouter la clé GPG officielle Docker
-  ansible.builtin.apt_key:
+- name: Nettoyer les entrées Docker conflictuelles
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/apt/sources.list.d/docker.list
+    - /etc/apt/trusted.gpg.d/docker.gpg
+    - /etc/apt/keyrings/docker.gpg
+
+- name: Créer le répertoire des keyrings
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Télécharger la clé GPG officielle Docker
+  ansible.builtin.get_url:
     url: https://download.docker.com/linux/ubuntu/gpg
-    state: present
+    dest: /etc/apt/keyrings/docker.asc
+    mode: "0644"
+    force: false
 
 - name: Ajouter le dépôt Docker
   ansible.builtin.apt_repository:
-    repo: >
-      deb [arch=amd64]
+    repo: >-
+      deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc]
       https://download.docker.com/linux/ubuntu
-      {{ ansible_distribution_release }} stable
+      {{ ansible_facts['distribution_release'] }} stable
     state: present
     filename: docker
 
@@ -43,11 +65,10 @@
     state: started
     enabled: true
 
-- name: Installer le module Python docker
-  ansible.builtin.pip:
+- name: Installer le module Python docker (via apt, PEP 668)
+  ansible.builtin.apt:
     name:
-      - docker
-      - docker-compose
+      - python3-docker
     state: present
 
 - name: Configurer le daemon Docker

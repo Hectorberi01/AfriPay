@@ -1,16 +1,17 @@
 ﻿version: "3.9"
 
-# AfriPay — Docker Compose Production Stack
+# AfriPay — Docker Compose Dev/Local Stack
 #
 # Services :
-#   afripay-api    → ASP.NET Core 9 API (port 8080)
+#   afripay-api    → ASP.NET Core 9 API (port 5030)
 #   postgres-live  → PostgreSQL afripay_live
 #   postgres-sand  → PostgreSQL afripay_sandbox
 #   redis          → Cache + Rate limiting
 #
 # Usage :
-#   docker compose up -d
+#   docker compose up -d --build
 #   docker compose logs -f afripay-api
+#   Docs : http://localhost:5030/docs
 
 services:
 
@@ -21,10 +22,10 @@ services:
     container_name: afripay-api
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "5030:5030"
     environment:
-      ASPNETCORE_ENVIRONMENT:    Production
-      ASPNETCORE_URLS:           http://+:8080
+      ASPNETCORE_ENVIRONMENT:    Development
+      ASPNETCORE_URLS:           http://+:5030
 
       # Bases de données
       ConnectionStrings__AfriPayLive:    "Host=postgres-live;Port=5432;Database=afripay_live;Username=afripay;Password=${POSTGRES_PASSWORD}"
@@ -37,7 +38,7 @@ services:
       Jwt__ExpiresInMinutes: "15"
 
       # Redis
-      Redis__ConnectionString: "redis:6379,password=${REDIS_PASSWORD},ssl=false"
+      ConnectionStrings__Redis: "redis:6379,password=${REDIS_PASSWORD},abortConnect=false"
 
       # SendGrid
       SendGrid__ApiKey:    ${SENDGRID_API_KEY}
@@ -75,7 +76,7 @@ services:
     networks:
       - afripay-net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:5030/health"]
       interval: 30s
       timeout: 10s
       retries: 3

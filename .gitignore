@@ -8,4 +8,4 @@ riderModule.iml
 .idea
 appsettings.Development.json
 appsettings.Production.json
-appsettings.secrets.json
+appsettings.secrets.json.env

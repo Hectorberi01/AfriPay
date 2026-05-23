@@ -11,9 +11,6 @@
   become: true
   serial: 1        # rolling update serveur par serveur
 
-  vars_files:
-    - "{{ inventory_dir }}/group_vars/vault.yml"
-
   vars:
     deploy_timestamp: "{{ ansible_date_time.iso8601 }}"
 
@@ -33,15 +30,17 @@
       tags: always
 
   tasks:
-    # 1. Connexion au registre GHCR 
+    # Connexion au registre GHCR
+    # En CI : GHCR_TOKEN=GITHUB_TOKEN (injecté par le workflow)
+    # En manuel : vault_ghcr_token (depuis vault.yml)
     - name: Se connecter à GitHub Container Registry
       community.docker.docker_login:
         registry_url: "{{ ghcr_registry }}"
-        username: "{{ vault_ghcr_user }}"
-        password: "{{ vault_ghcr_token }}"
+        username: "{{ lookup('env', 'GHCR_USER') | default(vault_ghcr_user) }}"
+        password: "{{ lookup('env', 'GHCR_TOKEN') | default(vault_ghcr_token) }}"
       tags: [pull, docker]
 
-    # 2. Copier les fichiers de configuration
+    # Copier les fichiers de configuration
     - name: Déployer le fichier .env
       ansible.builtin.template:
         src: "{{ playbook_dir }}/../roles/afripay/templates/.env.j2"
@@ -70,38 +69,46 @@
         force_source: true
       tags: [pull]
 
-    # Appliquer les migrations EF Core 
-    - name: Appliquer les migrations (LiveDb)
+    # Réseau partagé — créé avant Compose pour éviter les conflits de labels
+    - name: Créer le réseau Docker afripay-net
+      community.docker.docker_network:
+        name: afripay-net
+        state: present
+      tags: [migrate, restart]
+
+    # Démarrer l'infrastructure (postgres + redis) avant les migrations
+    - name: Démarrer les services d'infrastructure
+      community.docker.docker_compose_v2:
+        project_src: "{{ app_dir }}"
+        services: [postgres-live, postgres-sand, redis]
+        pull: missing
+        state: present
+      tags: [migrate, restart]
+
+    - name: Attendre que postgres-live soit prêt
+      community.docker.docker_container_info:
+        name: afripay-postgres-live
+      register: pg_live_info
+      retries: 12
+      delay: 5
+      until: pg_live_info.container.State.Health.Status == 'healthy'
+      tags: [migrate, restart]
+
+    # Appliquer les migrations EF Core (live + sandbox en une passe)
+    - name: Appliquer les migrations (Live + Sandbox)
       community.docker.docker_container:
-        name: afripay-migrate-live
+        name: afripay-migrate
         image: "{{ image_api }}:{{ image_tag }}"
-        command: dotnet AfriPay.dll migrate live
+        command: migrate
         env_file: "{{ app_dir }}/.env"
         networks:
           - name: afripay-net
         detach: false
         cleanup: true
         restart_policy: "no"
-      register: migration_live
-      tags: [migrate]
-
-    - name: Appliquer les migrations (SandboxDb)
-      community.docker.docker_container:
-        name: afripay-migrate-sandbox
-        image: "{{ image_api }}:{{ image_tag }}"
-        command: dotnet AfriPay.dll migrate sandbox
-        env_file: "{{ app_dir }}/.env"
-        networks:
-          - name: afripay-net
-        detach: false
-        cleanup: true
-        restart_policy: "no"
-      register: migration_sandbox
-      tags: [migrate]
-
-    - name: Afficher les résultats des migrations
-      ansible.builtin.debug:
-        msg: "Migrations Live OK | Sandbox OK"
+      register: migration_result
+      async: 300
+      poll: 10
       tags: [migrate]
 
     # Rolling update du conteneur API 

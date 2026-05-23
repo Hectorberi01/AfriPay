@@ -8,9 +8,6 @@
   hosts: api
   become: true
 
-  vars_files:
-    - "{{ inventory_dir }}/group_vars/vault.yml"
-
   vars:
     rollback_tag: "{{ rollback_tag | mandatory('Fournir le tag : -e rollback_tag=sha-xxxxx') }}"
 

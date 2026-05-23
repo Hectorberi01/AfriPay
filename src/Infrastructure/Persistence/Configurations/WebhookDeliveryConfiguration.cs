@@ -26,7 +26,7 @@ public sealed class WebhookDeliveryConfiguration : IEntityTypeConfiguration<Webh
         b.Property(w => w.DeliveredAt);
         b.Property(w => w.CreatedAt).IsRequired();
 
-        // ── Backing field pour la collection Attempts ──────────
+        // Backing field pour la collection Attempts
         // WebhookDelivery.Attempts est IReadOnlyList<DeliveryAttempt>
         // exposant le champ privé _attempts.
         // HasField() indique à EF quel champ utiliser en lecture/écriture.

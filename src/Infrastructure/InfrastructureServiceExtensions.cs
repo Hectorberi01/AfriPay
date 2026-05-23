@@ -45,26 +45,28 @@ public static class InfrastructureServiceExtensions
         
         var sensitive = configuration.GetValue<bool>("Database:EnableSensitiveLogging");
         
+        var migrationsAssembly = typeof(LiveDbContext).Assembly.GetName().Name;
+
         services.AddDbContext<LiveDbContext>(o =>
         {
             o.UseNpgsql(liveConn, n =>
             {
                 n.EnableRetryOnFailure(3, TimeSpan.FromSeconds(5), null);
                 n.CommandTimeout(30);
-                n.MigrationsAssembly("AfriPay.Infrastructure");
                 n.MigrationsHistoryTable("__ef_migrations");
+                n.MigrationsAssembly(migrationsAssembly);
             });
             o.EnableSensitiveDataLogging(sensitive);
         });
-        
+
         services.AddDbContext<SandboxDbContext>(o =>
         {
             o.UseNpgsql(sandboxConn, n =>
             {
                 n.EnableRetryOnFailure(3, TimeSpan.FromSeconds(5), null);
                 n.CommandTimeout(30);
-                n.MigrationsAssembly("AfriPay.Infrastructure");
                 n.MigrationsHistoryTable("__ef_migrations");
+                n.MigrationsAssembly(migrationsAssembly);
             });
             o.EnableSensitiveDataLogging(sensitive);
         });

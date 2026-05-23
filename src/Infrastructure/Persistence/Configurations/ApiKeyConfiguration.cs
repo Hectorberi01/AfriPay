@@ -20,7 +20,6 @@ public sealed class ApiKeyConfiguration : IEntityTypeConfiguration<ApiKey>
         b.ToTable("api_keys");
         b.HasKey(k => k.Id);
 
-        // ── Clé API ────────────────────────────────────────────
         b.Property(k => k.KeyHash)
             .HasColumnName("key_hash")
             .HasMaxLength(64)
@@ -33,33 +32,27 @@ public sealed class ApiKeyConfiguration : IEntityTypeConfiguration<ApiKey>
             .HasMaxLength(20)
             .IsRequired();
 
-        // ── Type enum → string ─────────────────────────────────
         b.Property(k => k.Type)
             .HasColumnName("key_type")
             .HasConversion<string>()
             .HasMaxLength(10)
             .IsRequired();
 
-        // ── Statut ─────────────────────────────────────────────
         b.Property(k => k.IsActive)
             .HasColumnName("is_active")
             .IsRequired();
 
-        // ── Relation avec Merchant ─────────────────────────────
         b.Property(k => k.MerchantId)
             .HasColumnName("merchant_id")
             .IsRequired();
 
-        // ── Timestamps ─────────────────────────────────────────
         b.Property(k => k.CreatedAt)
             .HasColumnName("created_at")
             .IsRequired();
 
         b.Property(k => k.RevokedAt)
             .HasColumnName("revoked_at");
-
-        // ── Index ──────────────────────────────────────────────
-
+        
         // Index principal : lookup auth à chaque requête HTTP
         // Partiel sur is_active = true — ignore les clés révoquées
         b.HasIndex(k => k.KeyHash)

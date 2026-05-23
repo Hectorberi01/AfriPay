@@ -1,7 +1,7 @@
-# Secrets chiffrés non versionnés tant que non chiffrés par Vault
+# Le vault staging chiffré est versionné (AES256 — sûr à commiter)
+# Le vault production reste hors dépôt (chiffrer avant de commiter)
+inventory/production/group_vars/all/vault.yml
 *.retry
-inventory/*/group_vars/vault.yml
-!inventory/*/group_vars/vault.yml.example
 
 # Clés SSH
 *.pem

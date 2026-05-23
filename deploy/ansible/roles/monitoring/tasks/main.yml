@@ -1,5 +1,5 @@
 ---
-# ── Rôle monitoring — Prometheus + Grafana + Alertmanager ──────
+# Rôle monitoring — Prometheus + Grafana + Alertmanager
 
 - name: Créer le répertoire de supervision
   ansible.builtin.file:
