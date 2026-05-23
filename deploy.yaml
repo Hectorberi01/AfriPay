@@ -321,7 +321,6 @@ jobs:
           echo "${{ secrets.PROD_SSH_KEY }}" > ~/.ssh/afripay_prod
           chmod 600 ~/.ssh/afripay_prod
           ssh-keyscan -H "${{ secrets.PROD_HOST }}" >> ~/.ssh/known_hosts
-
       - name: Écrire le mot de passe Ansible Vault
         run: |
           mkdir -p ~/.ansible
