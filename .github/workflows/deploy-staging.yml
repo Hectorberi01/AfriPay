@@ -118,7 +118,7 @@ jobs:
           STAGING_HOST: ${{ secrets.STAGING_HOST }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           IMAGE_TAG: ${{ inputs.image_tag || needs.build-and-push.outputs.image_tag }}
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_TOKEN: ${{ secrets.GHCR_PAT }}
           GHCR_USER: ${{ github.actor }}
         run: |
           ansible-playbook playbooks/deploy.yml \
