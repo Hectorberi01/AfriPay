@@ -99,7 +99,7 @@
       community.docker.docker_container:
         name: afripay-migrate
         image: "{{ image_api }}:{{ image_tag }}"
-        command: dotnet AfriPay.dll migrate
+        command: migrate
         env_file: "{{ app_dir }}/.env"
         networks:
           - name: afripay-net
