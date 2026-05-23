@@ -73,6 +73,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Log in to GHCR (vérification token)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Install Ansible
         run: |
           pip install ansible
@@ -118,7 +125,7 @@ jobs:
           STAGING_HOST: ${{ secrets.STAGING_HOST }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           IMAGE_TAG: ${{ inputs.image_tag || needs.build-and-push.outputs.image_tag }}
-          GHCR_TOKEN: ${{ secrets.GHCR_PAT }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_USER: ${{ github.actor }}
         run: |
           ansible-playbook playbooks/deploy.yml \

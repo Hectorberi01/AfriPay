@@ -30,6 +30,17 @@
       tags: always
 
   tasks:
+    # Connexion au registre GHCR via docker CLI (--password-stdin évite les erreurs SDK)
+    - name: Se connecter à GitHub Container Registry
+      ansible.builtin.shell: |
+        echo "{{ lookup('env', 'GHCR_TOKEN') | default(vault_ghcr_token) }}" | \
+        docker login ghcr.io \
+          -u "{{ lookup('env', 'GHCR_USER') | default(vault_ghcr_user) }}" \
+          --password-stdin
+      no_log: true
+      changed_when: false
+      tags: [pull, docker]
+
     # Copier les fichiers de configuration
     - name: Déployer le fichier .env
       ansible.builtin.template:
