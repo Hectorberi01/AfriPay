@@ -102,6 +102,7 @@ jobs:
       - name: Test SSH connectivity
         run: |
           ssh -i ~/.ssh/afripay_staging \
+              -p 8022 \
               -o StrictHostKeyChecking=no \
               -o ConnectTimeout=15 \
               -o BatchMode=yes \
