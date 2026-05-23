@@ -87,38 +87,19 @@
       until: pg_live_info.container.State.Health.Status == 'healthy'
       tags: [migrate, restart]
 
-    # Appliquer les migrations EF Core
-    - name: Appliquer les migrations (LiveDb)
+    # Appliquer les migrations EF Core (live + sandbox en une passe)
+    - name: Appliquer les migrations (Live + Sandbox)
       community.docker.docker_container:
-        name: afripay-migrate-live
+        name: afripay-migrate
         image: "{{ image_api }}:{{ image_tag }}"
-        command: dotnet AfriPay.dll migrate live
+        command: dotnet AfriPay.dll migrate
         env_file: "{{ app_dir }}/.env"
         networks:
           - name: afripay-net
         detach: false
         cleanup: true
         restart_policy: "no"
-      register: migration_live
-      tags: [migrate]
-
-    - name: Appliquer les migrations (SandboxDb)
-      community.docker.docker_container:
-        name: afripay-migrate-sandbox
-        image: "{{ image_api }}:{{ image_tag }}"
-        command: dotnet AfriPay.dll migrate sandbox
-        env_file: "{{ app_dir }}/.env"
-        networks:
-          - name: afripay-net
-        detach: false
-        cleanup: true
-        restart_policy: "no"
-      register: migration_sandbox
-      tags: [migrate]
-
-    - name: Afficher les résultats des migrations
-      ansible.builtin.debug:
-        msg: "Migrations Live OK | Sandbox OK"
+      register: migration_result
       tags: [migrate]
 
     # Rolling update du conteneur API 

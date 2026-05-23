@@ -101,6 +101,12 @@ try
         await app.Services.InitializeDatabaseAsync();
     }
 
+    if (args.Length > 0 && args[0] == "migrate")
+    {
+        Log.Information("Migration mode — exiting.");
+        return 0;
+    }
+
     app.UseMiddleware<ExceptionHandlingMiddleware>();
     app.UseStaticFiles();
     app.UseRouting();
