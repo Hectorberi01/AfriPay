@@ -69,6 +69,13 @@
         force_source: true
       tags: [pull]
 
+    # Réseau partagé — créé avant Compose pour éviter les conflits de labels
+    - name: Créer le réseau Docker afripay-net
+      community.docker.docker_network:
+        name: afripay-net
+        state: present
+      tags: [migrate, restart]
+
     # Démarrer l'infrastructure (postgres + redis) avant les migrations
     - name: Démarrer les services d'infrastructure
       community.docker.docker_compose_v2:
