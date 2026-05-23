@@ -107,6 +107,8 @@
         cleanup: true
         restart_policy: "no"
       register: migration_result
+      async: 300
+      poll: 10
       tags: [migrate]
 
     # Rolling update du conteneur API 
