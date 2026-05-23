@@ -67,7 +67,6 @@ public static class InfrastructureServiceExtensions
                 n.CommandTimeout(30);
                 n.MigrationsHistoryTable("__ef_migrations");
                 n.MigrationsAssembly(migrationsAssembly);
-                n.MigrationsRootDirectory("Migrations/SandboxDb");
             });
             o.EnableSensitiveDataLogging(sensitive);
         });
