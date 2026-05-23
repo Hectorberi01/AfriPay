@@ -30,16 +30,6 @@
       tags: always
 
   tasks:
-    # Connexion au registre GHCR
-    # En CI : GHCR_TOKEN=GITHUB_TOKEN (injecté par le workflow)
-    # En manuel : vault_ghcr_token (depuis vault.yml)
-    - name: Se connecter à GitHub Container Registry
-      community.docker.docker_login:
-        registry_url: "{{ ghcr_registry }}"
-        username: "{{ lookup('env', 'GHCR_USER') | default(vault_ghcr_user) }}"
-        password: "{{ lookup('env', 'GHCR_TOKEN') | default(vault_ghcr_token) }}"
-      tags: [pull, docker]
-
     # Copier les fichiers de configuration
     - name: Déployer le fichier .env
       ansible.builtin.template:
