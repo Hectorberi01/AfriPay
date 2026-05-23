@@ -99,6 +99,15 @@ jobs:
             && echo "Vault OK" \
             || { echo "::error::Wrong vault password — check ANSIBLE_VAULT_PASS secret"; exit 1; }
 
+      - name: Test SSH connectivity
+        run: |
+          ssh -i ~/.ssh/afripay_staging \
+              -o StrictHostKeyChecking=no \
+              -o ConnectTimeout=15 \
+              -o BatchMode=yes \
+              root@${{ secrets.STAGING_HOST }} \
+              'echo "SSH OK — $(hostname)"'
+
       - name: Deploy to staging
         working-directory: deploy/ansible
         env:
