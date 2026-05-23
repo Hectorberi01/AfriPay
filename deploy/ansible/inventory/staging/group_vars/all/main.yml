@@ -23,7 +23,7 @@ domain_api:     staging-api.afripay.io
 domain_metrics: staging-metrics.afripay.io
 
 # Ports internes (identiques à prod)
-port_api:           8080
+port_api:           5030
 port_postgres_live: 5433
 port_postgres_sand: 5434
 port_redis:         6379

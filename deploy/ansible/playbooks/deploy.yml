@@ -30,7 +30,7 @@
       tags: always
 
   tasks:
-    # 1. Connexion au registre GHCR
+    # Connexion au registre GHCR
     # En CI : GHCR_TOKEN=GITHUB_TOKEN (injecté par le workflow)
     # En manuel : vault_ghcr_token (depuis vault.yml)
     - name: Se connecter à GitHub Container Registry
@@ -40,7 +40,7 @@
         password: "{{ lookup('env', 'GHCR_TOKEN') | default(vault_ghcr_token) }}"
       tags: [pull, docker]
 
-    # 2. Copier les fichiers de configuration
+    # Copier les fichiers de configuration
     - name: Déployer le fichier .env
       ansible.builtin.template:
         src: "{{ playbook_dir }}/../roles/afripay/templates/.env.j2"
