@@ -17,7 +17,7 @@ public static class SwaggerConfiguration
             //Info
             c.SwaggerDoc("v1", new OpenApiInfo
             {
-                Title = "AfriPay API",
+                Title = "AfriPay API Développer par Hector ADJAKPA",
                 Version = "v1",
                 Description = """
                               Passerelle de paiement multi-provider pour l'Afrique de l'Ouest.
